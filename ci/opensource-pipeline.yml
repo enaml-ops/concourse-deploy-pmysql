@@ -1,0 +1,233 @@
+groups: []
+
+resources:
+- name: cf-release
+  type: bosh-io-release
+  check_every: 1h
+  source:
+    repository: cloudfoundry/cf-release
+- name: garden-release
+  type: bosh-io-release
+  check_every: 1h
+  source:
+    repository: cloudfoundry/garden-linux-release
+- name: diego-release
+  type: bosh-io-release
+  check_every: 1h
+  source:
+    repository: cloudfoundry/diego-release
+- name: etcd-release
+  type: bosh-io-release
+  check_every: 1h
+  source:
+    repository: cloudfoundry-incubator/etcd-release
+- name: cf-mysql-release
+  type: bosh-io-release
+  check_every: 1h
+  source:
+    repository: cloudfoundry/cf-mysql-release
+- name: cflinuxfs2-release
+  type: bosh-io-release
+  check_every: 1h
+  source:
+    repository: cloudfoundry/cflinuxfs2-rootfs-release
+- name: stemcell
+  type: bosh-io-stemcell
+  source:
+    name: {{stemcell}}
+- name: concourse-deploy-cloudfoundry
+  type: git
+  check_every: 1h
+  source:
+    uri: https://github.com/enaml-ops/concourse-deploy-cloudfoundry
+    branch: master
+- name: omg-cli
+  type: github-release
+  check_every: 1h
+  source:
+    user: enaml-ops
+    repository: omg-cli
+- name: omg-cli-product-bundle
+  type: github-release
+  check_every: 1h
+  source:
+    user: enaml-ops
+    repository: omg-product-bundle
+- name: pipeline-tasks
+  type: git
+  check_every: 1h
+  source:
+    uri: https://github.com/18f/cg-pipeline-tasks.git
+    branch: master
+- name: {{deployment-name}}
+  type: bosh-deployment
+  source:
+    ca_cert: {{bosh-cacert}}
+    client_id: {{bosh-client-id}}
+    client_secret: {{bosh-client-secret}}
+    deployment: cf
+    target: {{bosh-target}}
+- name: slack
+  type: slack-notification
+  source:
+    url: https://hooks.slack.com/services/XXXXXXXXX/XXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXXX
+
+resource_types:
+- name: slack-notification
+  type: docker-image
+  source:
+    repository: cfcommunity/slack-notification-resource
+
+jobs:
+- name: deploy
+  plan:
+    - get: cf-release
+    - get: garden-release
+    - get: diego-release
+    - get: etcd-release
+    - get: cf-mysql-release
+    - get: cflinuxfs2-release
+    - get: stemcell
+    - get: concourse-deploy-cloudfoundry
+    - get: omg-cli
+    - get: omg-cli-product-bundle
+      params:
+        globs:
+        - cloudfoundry-plugin-*
+      trigger: true
+    - get: stemcell
+    - task: generate-manifest
+      config:
+        platform: linux
+        image_resource:
+          type: docker-image
+          source:
+            repository: virtmerlin/deploy-worker
+        run:
+          path: concourse-deploy-cloudfoundry/ci/tasks/generate-manifest.sh
+        params:
+          BOSH_CLIENT: {{bosh-user}}
+          BOSH_CLIENT_SECRET: {{bosh-pass}}
+          BOSH_CACERT: {{bosh-cacert}}
+          CLOUD_CONFIG_PLUGIN: {{cloud_config_plugin}}
+          PRODUCT_PLUGIN: {{product_plugin}}
+          VAULT_ADDR: {{vault_addr}}
+          VAULT_HASH_IP: {{vault_hash_ip}}
+          VAULT_HASH_HOSTVARS: {{vault_hash_hostvars}}
+          VAULT_HASH_KEYCERT: {{vault_hash_keycert}}
+          VAULT_HASH_PASSWORD: {{vault_hash_password}}
+          VAULT_TOKEN: {{vault_token}}
+        inputs:
+        - name: cf-release
+        - name: garden-release
+        - name: diego-release
+        - name: etcd-release
+        - name: cf-mysql-release
+        - name: cflinuxfs2-release
+        - name: stemcell
+        - name: concourse-deploy-cloudfoundry
+        - name: omg-cli
+        - name: omg-cli-product-bundle
+        outputs:
+        - name: manifest
+          path: ""
+    - put: {{deployment-name}}
+      params:
+        manifest: manifest/deployment.yml
+        stemcells:
+        - stemcell/*.tgz
+        releases:
+        - cf-release/*.tgz
+        - garden-release/*.tgz
+        - diego-release/*.tgz
+        - etcd-release/*.tgz
+        - cf-mysql-release/*.tgz
+        - cflinuxfs2-release/*.tgz
+      on_success:
+        put: slack
+        params:
+          text: |
+            :white_check_mark: Successfully deployed {{deployment-name}} CF
+            <https://$ATC_EXTERNAL_URL/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME|View build details>
+          channel: {{slack-channel}}
+          username: {{slack-username}}
+          icon_url: {{slack-icon-url}}
+      on_failure:
+        put: slack
+        params:
+          text: |
+            :x: FAILED to deploy {{deployment-name}} CF
+            <https://$ATC_EXTERNAL_URL/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME|View build details>
+          channel: {{slack-channel}}
+          username: {{slack-username}}
+          icon_url: {{slack-icon-url}}
+- name: run-smoke-tests
+  plan:
+  - aggregate:
+    - get: pipeline-tasks
+      trigger: false
+    - get: {{deployment-name}}
+      passed: [deploy]
+      trigger: true
+  - task: run-errand
+    file: pipeline-tasks/bosh-errand.yml
+    params:
+      BOSH_TARGET: {{bosh-target}}
+      BOSH_USERNAME: {{bosh-user}}
+      BOSH_PASSWORD: {{bosh-pass}}
+      BOSH_DEPLOYMENT_NAME: {{deployment-name}}
+      BOSH_ERRAND: smoke_tests
+      BOSH_CACERT: {{bosh-cacert}}
+    on_success:
+      put: slack
+      params:
+        text: |
+          :white_check_mark: Smoke tests for {{deployment-name}} CF passed
+          <https://$ATC_EXTERNAL_URL/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME|View build details>
+        channel: {{slack-channel}}
+        username: {{slack-username}}
+        icon_url: {{slack-icon-url}}
+    on_failure:
+      put: slack
+      params:
+        text: |
+          :x: Smoke tests for {{deployment-name}} CF failed
+          <https://$ATC_EXTERNAL_URL/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME|View build details>
+        channel: {{slack-channel}}
+        username: {{slack-username}}
+        icon_url: {{slack-icon-url}}
+- name: run-acceptance-tests
+  plan:
+  - aggregate:
+    - get: pipeline-tasks
+      trigger: false
+    - get: {{deployment-name}}
+      passed: [run-smoke-tests]
+      trigger: true
+  - task: run-errand
+    file: pipeline-tasks/bosh-errand.yml
+    params:
+      BOSH_TARGET: {{bosh-target}}
+      BOSH_USERNAME: {{bosh-user}}
+      BOSH_PASSWORD: {{bosh-pass}}
+      BOSH_DEPLOYMENT_NAME: {{deployment-name}}
+      BOSH_ERRAND: smoke_tests
+      BOSH_CACERT: {{bosh-cacert}}
+    on_success:
+      put: slack
+      params:
+        text: |
+          :white_check_mark: Acceptance tests for {{deployment-name}} CF passed
+          <https://$ATC_EXTERNAL_URL/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME|View build details>
+        channel: {{slack-channel}}
+        username: {{slack-username}}
+        icon_url: {{slack-icon-url}}
+    on_failure:
+      put: slack
+      params:
+        text: |
+          :x: Acceptance tests for {{deployment-name}} CF failed
+          <https://$ATC_EXTERNAL_URL/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME|View build details>
+        channel: {{slack-channel}}
+        username: {{slack-username}}
+        icon_url: {{slack-icon-url}}

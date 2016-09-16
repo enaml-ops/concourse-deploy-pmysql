@@ -6,10 +6,6 @@ omg-cli/omg-linux register-plugin \
   -type product \
   -pluginpath omg-product-bundle/$PRODUCT_PLUGIN
 
-if [[ $SKIP_HAPROXY == "false" ]]; then
-  HAPROXY_FLAG="--skip-haproxy=false"
-fi
-
 omg-cli/omg-linux deploy-product \
   --bosh-url $(vault read -field=bosh-url $VAULT_HASH_HOSTVARS) \
   --bosh-port $(vault read -field=bosh-port $VAULT_HASH_HOSTVARS) \
@@ -19,7 +15,6 @@ omg-cli/omg-linux deploy-product \
   --ssl-ignore \
   $PRODUCT_PLUGIN \
   --stemcell-version $STEMCELL_VERSION \
-  $HAPROXY_FLAG \
   --infer-from-cloud \
   --vault-active \
   --vault-domain $VAULT_ADDR \

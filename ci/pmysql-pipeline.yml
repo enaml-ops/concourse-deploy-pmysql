@@ -3,49 +3,37 @@ groups:
   jobs:
   - get-product-version
   - deploy
-  - smoke-tests
+  - broker-registrar
   - acceptance-tests
-  - push-apps-manager
-  - notifications
-  - notifications-ui
-  - autoscaling
-  - autoscaling-register-broker
 - name: deploy
   jobs:
   - get-product-version
   - deploy
 - name: tests
   jobs:
-  - smoke-tests
   - acceptance-tests
 - name: errands
   jobs:
-  - push-apps-manager
-  - notifications
-  - notifications-ui
-  - autoscaling
-  - autoscaling-register-broker
+  - broker-registrar
+  - acceptance-tests
 
 resources:
 - name: daily
   type: time
   source: {interval: 24h}
-- name: elastic-runtime
+- name: p-mysql
   type: pivnet
   check_every: 4h
   source:
     api_token: {{pivnet_api_token}}
-    product_slug: elastic-runtime
-    product_version: {{elastic-runtime-version}}
+    product_slug: p-mysql
+    product_version: {{p-mysql-runtime-version}}
     sort_by: semver
-- name: every-4hrs
-  type: time
-  source: {interval: 4h}
-- name: concourse-deploy-pmysql
+- name: concourse-deploy-p-mysql
   type: git
   check_every: 4h
   source:
-    uri: https://github.com/enaml-ops/concourse-deploy-pmysql
+    uri: https://github.com/enaml-ops/concourse-deploy-p-mysql
     branch: master
 - name: omg-cli
   type: github-release
@@ -65,7 +53,7 @@ resources:
     ca_cert: {{bosh-cacert}}
     client_id: {{bosh-client-id}}
     client_secret: {{bosh-client-secret}}
-    deployment: cf
+    deployment: p-mysql
     target: {{bosh-target}}
 - name: stemcells
   type: pivnet
@@ -84,7 +72,7 @@ resource_types:
 jobs:
 - name: get-product-version
   plan:
-    - get: concourse-deploy-pmysql
+    - get: concourse-deploy-p-mysql
     - get: omg-cli
       params:
         globs:
@@ -93,7 +81,7 @@ jobs:
       trigger: true
       params:
         globs:
-        - cloudfoundry-plugin-linux
+        - p-mysql-plugin-linux
     - task: get-product-version
       config:
         platform: linux
@@ -102,12 +90,12 @@ jobs:
           source:
             repository: virtmerlin/deploy-worker
         run:
-          path: concourse-deploy-pmysql/ci/tasks/get-version-from-plugin.sh
+          path: concourse-deploy-p-mysql/ci/tasks/get-version-from-plugin.sh
         params:
           PRODUCT_PLUGIN: {{product_plugin}}
           OUTPUT_DIR: versions
         inputs:
-        - name: concourse-deploy-pmysql
+        - name: concourse-deploy-p-mysql
         - name: omg-cli
         - name: omg-product-bundle
         outputs:
@@ -121,19 +109,19 @@ jobs:
           source:
             repository: virtmerlin/deploy-worker
         run:
-          path: concourse-deploy-pmysql/ci/tasks/update-pipeline.sh
+          path: concourse-deploy-p-mysql/ci/tasks/update-pipeline.sh
         params:
-          PIPELINE_NAME: deploy-pmysql
+          PIPELINE_NAME: deploy-p-mysql
           CONCOURSE_URL: {{concourse-url}}
           CONCOURSE_USER: {{concourse-user}}
           CONCOURSE_PASS: {{concourse-pass}}
         inputs:
-        - name: concourse-deploy-pmysql
+        - name: concourse-deploy-p-mysql
         - name: versions
         outputs:
 - name: deploy
   plan:
-    - get: concourse-deploy-pmysql
+    - get: concourse-deploy-p-mysql
     - get: omg-cli
       passed: [get-product-version]
       params:
@@ -144,11 +132,11 @@ jobs:
       trigger: true
       params:
         globs:
-        - cloudfoundry-plugin-linux
-    - get: elastic-runtime
+        - p-mysql-plugin-linux
+    - get: p-mysql
       params:
         globs:
-        - cf-*
+        - p-mysql-*
     - get: stemcells
       trigger: true
       params:
@@ -162,13 +150,12 @@ jobs:
           source:
             repository: virtmerlin/deploy-worker
         run:
-          path: concourse-deploy-pmysql/ci/tasks/generate-pmysql-manifest.sh
+          path: concourse-deploy-p-mysql/ci/tasks/generate-p-mysql-manifest.sh
         params:
           BOSH_CLIENT: {{bosh-user}}
           BOSH_CLIENT_SECRET: {{bosh-pass}}
           BOSH_CACERT: {{bosh-cacert}}
           PRODUCT_PLUGIN: {{product_plugin}}
-          SKIP_HAPROXY: {{skip-haproxy}}
           STEMCELL_VERSION: {{stemcell-version}}
           VAULT_ADDR: {{vault_addr}}
           VAULT_HASH_IP: {{vault_hash_ip}}
@@ -179,7 +166,7 @@ jobs:
           VAULT_TOKEN: {{vault_token}}
           OUTPUT_DIR: manifest
         inputs:
-        - name: concourse-deploy-pmysql
+        - name: concourse-deploy-p-mysql
         - name: omg-cli
         - name: omg-product-bundle
         outputs:
@@ -193,15 +180,15 @@ jobs:
           source:
             repository: virtmerlin/deploy-worker
         run:
-          path: concourse-deploy-pmysql/ci/tasks/extract-tile.sh
+          path: concourse-deploy-p-mysql/ci/tasks/extract-tile.sh
         params:
-          PRODUCT_DIR: elastic-runtime
-          OUTPUT_DIR: elastic-runtime-extracted
+          PRODUCT_DIR: p-mysql
+          OUTPUT_DIR: p-mysql-extracted
         inputs:
-        - name: concourse-deploy-pmysql
-        - name: elastic-runtime
+        - name: concourse-deploy-p-mysql
+        - name: p-mysql
         outputs:
-        - name: elastic-runtime-extracted
+        - name: p-mysql-extracted
           path: ""
     - put: {{deployment-name}}
       params:
@@ -209,16 +196,14 @@ jobs:
         stemcells:
         - stemcells/bosh-stemcell*.tgz
         releases:
-        - elastic-runtime-extracted/releases/*.tgz
-- name: smoke-tests
+        - p-mysql-extracted/releases/*.tgz
+- name: broker-registrar
   plan:
-    - get: every-4hrs
-      trigger: true
-    - get: concourse-deploy-pmysql
+    - get: concourse-deploy-p-mysql
     - get: {{deployment-name}}
       passed: [deploy]
       trigger: true
-    - task: smoke-tests
+    - task: broker-registrar
       config:
         platform: linux
         image_resource:
@@ -226,24 +211,24 @@ jobs:
           source:
             repository: virtmerlin/deploy-worker
         run:
-          path: concourse-deploy-pmysql/ci/tasks/run-errand.sh
+          path: concourse-deploy-p-mysql/ci/tasks/run-errand.sh
         params:
           BOSH_CACERT: {{bosh-cacert}}
           BOSH_CLIENT: {{bosh-client-id}}
           BOSH_CLIENT_SECRET: {{bosh-client-secret}}
-          BOSH_DEPLOYMENT_NAME: cf
-          BOSH_ERRAND: smoke-tests
+          BOSH_DEPLOYMENT_NAME: p-mysql
+          BOSH_ERRAND: broker-registrar
           BOSH_TARGET: {{bosh-target}}
         inputs:
-        - name: concourse-deploy-pmysql
+        - name: concourse-deploy-p-mysql
         outputs:
 - name: acceptance-tests
   plan:
     - get: daily
       trigger: true
-    - get: concourse-deploy-pmysql
+    - get: concourse-deploy-p-mysql
     - get: {{deployment-name}}
-      passed: [smoke-tests]
+      passed: [broker-registrar]
       trigger: true
     - task: acceptance-tests
       config:
@@ -253,139 +238,14 @@ jobs:
           source:
             repository: virtmerlin/deploy-worker
         run:
-          path: concourse-deploy-pmysql/ci/tasks/run-errand.sh
+          path: concourse-deploy-p-mysql/ci/tasks/run-errand.sh
         params:
           BOSH_CACERT: {{bosh-cacert}}
           BOSH_CLIENT: {{bosh-client-id}}
           BOSH_CLIENT_SECRET: {{bosh-client-secret}}
-          BOSH_DEPLOYMENT_NAME: pmysql
+          BOSH_DEPLOYMENT_NAME: p-mysql
           BOSH_ERRAND: acceptance-tests
           BOSH_TARGET: {{bosh-target}}
         inputs:
-        - name: concourse-deploy-pmysql
-        outputs:
-- name: push-apps-manager
-  plan:
-    - get: concourse-deploy-pmysql
-    - get: {{deployment-name}}
-      passed: [acceptance-tests]
-      trigger: true
-    - task: push-apps-manager
-      config:
-        platform: linux
-        image_resource:
-          type: docker-image
-          source:
-            repository: virtmerlin/deploy-worker
-        run:
-          path: concourse-deploy-pmysql/ci/tasks/run-errand.sh
-        params:
-          BOSH_CACERT: {{bosh-cacert}}
-          BOSH_CLIENT: {{bosh-client-id}}
-          BOSH_CLIENT_SECRET: {{bosh-client-secret}}
-          BOSH_DEPLOYMENT_NAME: cf
-          BOSH_ERRAND: push-apps-manager
-          BOSH_TARGET: {{bosh-target}}
-        inputs:
-        - name: concourse-deploy-pmysql
-        outputs:
-- name: notifications
-  plan:
-    - get: concourse-deploy-pmysql
-    - get: {{deployment-name}}
-      passed: [acceptance-tests]
-      trigger: true
-    - task: notifications
-      config:
-        platform: linux
-        image_resource:
-          type: docker-image
-          source:
-            repository: virtmerlin/deploy-worker
-        run:
-          path: concourse-deploy-pmysql/ci/tasks/run-errand.sh
-        params:
-          BOSH_CACERT: {{bosh-cacert}}
-          BOSH_CLIENT: {{bosh-client-id}}
-          BOSH_CLIENT_SECRET: {{bosh-client-secret}}
-          BOSH_DEPLOYMENT_NAME: pmysql
-          BOSH_ERRAND: notifications
-          BOSH_TARGET: {{bosh-target}}
-        inputs:
-        - name: concourse-deploy-pmysql
-        outputs:
-- name: notifications-ui
-  plan:
-    - get: concourse-deploy-pmysql
-    - get: {{deployment-name}}
-      passed: [notifications]
-      trigger: true
-    - task: notifications-ui
-      config:
-        platform: linux
-        image_resource:
-          type: docker-image
-          source:
-            repository: virtmerlin/deploy-worker
-        run:
-          path: concourse-deploy-pmysql/ci/tasks/run-errand.sh
-        params:
-          BOSH_CACERT: {{bosh-cacert}}
-          BOSH_CLIENT: {{bosh-client-id}}
-          BOSH_CLIENT_SECRET: {{bosh-client-secret}}
-          BOSH_DEPLOYMENT_NAME: pmysql
-          BOSH_ERRAND: notifications-ui
-          BOSH_TARGET: {{bosh-target}}
-        inputs:
-        - name: concourse-deploy-pmysql
-        outputs:
-- name: autoscaling
-  plan:
-    - get: concourse-deploy-pmysql
-    - get: {{deployment-name}}
-      passed: [acceptance-tests]
-      trigger: true
-    - task: autoscaling
-      config:
-        platform: linux
-        image_resource:
-          type: docker-image
-          source:
-            repository: virtmerlin/deploy-worker
-        run:
-          path: concourse-deploy-pmysql/ci/tasks/run-errand.sh
-        params:
-          BOSH_CACERT: {{bosh-cacert}}
-          BOSH_CLIENT: {{bosh-client-id}}
-          BOSH_CLIENT_SECRET: {{bosh-client-secret}}
-          BOSH_DEPLOYMENT_NAME: pmysql
-          BOSH_ERRAND: autoscaling
-          BOSH_TARGET: {{bosh-target}}
-        inputs:
-        - name: concourse-deploy-pmysql
-        outputs:
-- name: autoscaling-register-broker
-  plan:
-    - get: concourse-deploy-pmysql
-    - get: {{deployment-name}}
-      passed: [autoscaling]
-      trigger: true
-    - task: autoscaling-register-broker
-      config:
-        platform: linux
-        image_resource:
-          type: docker-image
-          source:
-            repository: virtmerlin/deploy-worker
-        run:
-          path: concourse-deploy-pmysql/ci/tasks/run-errand.sh
-        params:
-          BOSH_CACERT: {{bosh-cacert}}
-          BOSH_CLIENT: {{bosh-client-id}}
-          BOSH_CLIENT_SECRET: {{bosh-client-secret}}
-          BOSH_DEPLOYMENT_NAME: pmysql
-          BOSH_ERRAND: autoscaling-register-broker
-          BOSH_TARGET: {{bosh-target}}
-        inputs:
-        - name: concourse-deploy-pmysql
+        - name: concourse-deploy-p-mysql
         outputs:

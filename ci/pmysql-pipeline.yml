@@ -27,13 +27,13 @@ resources:
   source:
     api_token: {{pivnet_api_token}}
     product_slug: p-mysql
-    product_version: {{p-mysql-runtime-version}}
+    product_version: {{p-mysql-version}}
     sort_by: semver
 - name: concourse-deploy-p-mysql
   type: git
   check_every: 4h
   source:
-    uri: https://github.com/enaml-ops/concourse-deploy-p-mysql
+    uri: https://github.com/enaml-ops/concourse-deploy-pmysql
     branch: master
 - name: omg-cli
   type: github-release

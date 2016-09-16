@@ -14,7 +14,7 @@ omg-cli/omg-linux deploy-product \
   --print-manifest \
   --ssl-ignore \
   $PRODUCT_PLUGIN \
-  --stemcell-version $STEMCELL_VERSION \
+  --stemcell-ver $STEMCELL_VERSION \
   --infer-from-cloud \
   --vault-active \
   --vault-domain $VAULT_ADDR \

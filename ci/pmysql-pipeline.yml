@@ -111,7 +111,7 @@ jobs:
         run:
           path: concourse-deploy-p-mysql/ci/tasks/update-pipeline.sh
         params:
-          PIPELINE_NAME: deploy-p-mysql
+          PIPELINE_NAME: deploy-mysql
           CONCOURSE_URL: {{concourse-url}}
           CONCOURSE_USER: {{concourse-user}}
           CONCOURSE_PASS: {{concourse-pass}}

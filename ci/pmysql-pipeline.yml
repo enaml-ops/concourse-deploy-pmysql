@@ -54,7 +54,7 @@ resources:
     client_id: {{bosh-client-id}}
     client_secret: {{bosh-client-secret}}
     deployment: p-mysql
-    target: {{bosh-target}}
+    target: {{bosh-url}}
 - name: stemcells
   type: pivnet
   source:
@@ -218,7 +218,7 @@ jobs:
           BOSH_CLIENT_SECRET: {{bosh-client-secret}}
           BOSH_DEPLOYMENT_NAME: p-mysql
           BOSH_ERRAND: broker-registrar
-          BOSH_TARGET: {{bosh-target}}
+          BOSH_TARGET: {{bosh-url}}
         inputs:
         - name: concourse-deploy-p-mysql
         outputs:
@@ -245,7 +245,7 @@ jobs:
           BOSH_CLIENT_SECRET: {{bosh-client-secret}}
           BOSH_DEPLOYMENT_NAME: p-mysql
           BOSH_ERRAND: acceptance-tests
-          BOSH_TARGET: {{bosh-target}}
+          BOSH_TARGET: {{bosh-url}}
         inputs:
         - name: concourse-deploy-p-mysql
         outputs:

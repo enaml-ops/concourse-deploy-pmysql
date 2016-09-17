@@ -7,14 +7,14 @@ omg-cli/omg-linux register-plugin \
   -pluginpath omg-product-bundle/$PRODUCT_PLUGIN
 
 omg-cli/omg-linux deploy-product \
-  --bosh-url $(vault read -field=bosh-url $VAULT_HASH_HOSTVARS) \
-  --bosh-port $(vault read -field=bosh-port $VAULT_HASH_HOSTVARS) \
-  --bosh-user $(vault read -field=bosh-user $VAULT_HASH_HOSTVARS) \
-  --bosh-pass $(vault read -field=bosh-pass $VAULT_HASH_HOSTVARS) \
+  --bosh-url $(vault read -field=bosh-url $VAULT_HASH_MISC) \
+  --bosh-port $(vault read -field=bosh-port $VAULT_HASH_MISC) \
+  --bosh-user $(vault read -field=bosh-user $VAULT_HASH_MISC) \
+  --bosh-pass $(vault read -field=bosh-pass $VAULT_HASH_MISC) \
   --print-manifest \
   --ssl-ignore \
   $PRODUCT_PLUGIN \
-  --stemcell-version $STEMCELL_VERSION \
+  --stemcell-ver $STEMCELL_VERSION \
   --infer-from-cloud \
   --vault-active \
   --vault-domain $VAULT_ADDR \

@@ -1,12 +1,14 @@
 groups:
 - name: all
   jobs:
+  - populate-or-rotate-vault
   - get-product-version
   - deploy
   - broker-registrar
   - acceptance-tests
 - name: deploy
   jobs:
+  - populate-or-rotate-vault
   - get-product-version
   - deploy
 - name: tests
@@ -21,6 +23,9 @@ resources:
 - name: daily
   type: time
   source: {interval: 24h}
+- name: monthly
+  type: time
+  source: {interval: 720h}
 - name: p-mysql
   type: pivnet
   check_every: 4h
@@ -70,6 +75,43 @@ resource_types:
     tag: latest-final
 
 jobs:
+- name: populate-or-rotate-vault
+  plan:
+    - aggregate:
+      - get: monthly
+        trigger: true
+      - get: concourse-deploy-p-mysql
+      - get: omg-cli
+        params:
+          globs:
+          - omg-linux
+      - get: omg-product-bundle
+        trigger: true
+        params:
+          globs:
+          - p-mysql-plugin-linux
+    - task: populate-or-rotate
+      config:
+        platform: linux
+        image_resource:
+          type: docker-image
+          source:
+            repository: virtmerlin/deploy-worker
+        run:
+          path: concourse-deploy-p-mysql/ci/tasks/populate-or-rotate-vault.sh
+        params:
+          PRODUCT_PLUGIN: {{product_plugin}}
+          STEMCELL_VERSION: {{stemcell-version}}
+          VAULT_ADDR: {{vault_addr}}
+          VAULT_HASH_ERT_PASSWORD: {{vault_hash_ert_password}}
+          VAULT_HASH_IP: {{vault_hash_ip}}
+          VAULT_HASH_PASSWORD: {{vault_hash_password}}
+          VAULT_TOKEN: {{vault_token}}
+        inputs:
+        - name: concourse-deploy-p-mysql
+        - name: omg-cli
+        - name: omg-product-bundle
+        outputs:
 - name: get-product-version
   plan:
     - get: concourse-deploy-p-mysql
@@ -82,6 +124,7 @@ jobs:
       params:
         globs:
         - p-mysql-plugin-linux
+      passed: [populate-or-rotate-vault]
     - task: get-product-version
       config:
         platform: linux
@@ -158,10 +201,8 @@ jobs:
           PRODUCT_PLUGIN: {{product_plugin}}
           STEMCELL_VERSION: {{stemcell-version}}
           VAULT_ADDR: {{vault_addr}}
+          VAULT_HASH_ERT_PASSWORD: {{vault_hash_ert_password}}
           VAULT_HASH_IP: {{vault_hash_ip}}
-          VAULT_HASH_HOSTVARS: {{vault_hash_hostvars}}
-          VAULT_HASH_KEYCERT: {{vault_hash_keycert}}
-          VAULT_HASH_MISC: {{vault_hash_misc}}
           VAULT_HASH_PASSWORD: {{vault_hash_password}}
           VAULT_TOKEN: {{vault_token}}
           OUTPUT_DIR: manifest

@@ -135,9 +135,9 @@ jobs:
             repository: virtmerlin/deploy-worker
         run:
           path: concourse-deploy-p-mysql/ci/tasks/get-version-from-plugin.sh
-        params:
-          PRODUCT_PLUGIN: {{product_plugin}}
-          OUTPUT_DIR: versions
+          params:
+            PRODUCT_PLUGIN: {{product_plugin}}
+            OUTPUT_DIR: versions
         inputs:
         - name: concourse-deploy-p-mysql
         - name: omg-cli

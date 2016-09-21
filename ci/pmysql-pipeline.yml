@@ -105,6 +105,7 @@ jobs:
           VAULT_ADDR: {{vault_addr}}
           VAULT_HASH_ERT_PASSWORD: {{vault_hash_ert_password}}
           VAULT_HASH_IP: {{vault_hash_ip}}
+          VAULT_HASH_MISC: {{vault_hash_misc}}
           VAULT_HASH_PASSWORD: {{vault_hash_password}}
           VAULT_TOKEN: {{vault_token}}
         inputs:
@@ -203,6 +204,7 @@ jobs:
           VAULT_ADDR: {{vault_addr}}
           VAULT_HASH_ERT_PASSWORD: {{vault_hash_ert_password}}
           VAULT_HASH_IP: {{vault_hash_ip}}
+          VAULT_HASH_MISC: {{vault_hash_misc}}
           VAULT_HASH_PASSWORD: {{vault_hash_password}}
           VAULT_TOKEN: {{vault_token}}
           OUTPUT_DIR: manifest

@@ -18,6 +18,7 @@ omg-cli/omg-linux deploy-product \
   --infer-from-cloud \
   --vault-domain $VAULT_ADDR \
   --vault-hash-ert $VAULT_HASH_ERT_PASSWORD \
+  --vault-hash-ert $VAULT_HASH_ERT_IP \
   --vault-hash-mysql-ip $VAULT_HASH_IP \
   --vault-hash-mysql-secret $VAULT_HASH_PASSWORD \
   --vault-token $VAULT_TOKEN > manifest/deployment.yml

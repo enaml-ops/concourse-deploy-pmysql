@@ -86,7 +86,6 @@ jobs:
           globs:
           - omg-linux
       - get: omg-product-bundle
-        trigger: true
         params:
           globs:
           - p-mysql-plugin-linux

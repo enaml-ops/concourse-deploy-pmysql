@@ -19,7 +19,7 @@ omg-cli/omg-linux deploy-product \
   --ssl-ignore \
   $PRODUCT_PLUGIN \
   --infer-from-cloud \
-  --stemcell-version $STEMCELL_VERSION \
+  --stemcell-ver $STEMCELL_VERSION \
   --vault-active \
   --vault-domain $VAULT_ADDR \
   --vault-hash-ert $VAULT_HASH_ERT_PASSWORD \

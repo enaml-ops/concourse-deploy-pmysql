@@ -115,17 +115,18 @@ jobs:
         outputs:
 - name: get-product-version
   plan:
-    - get: concourse-deploy-p-mysql
-    - get: omg-cli
-      params:
-        globs:
-        - omg-linux
-    - get: omg-product-bundle
-      trigger: true
-      params:
-        globs:
-        - p-mysql-plugin-linux
-      passed: [populate-or-rotate-vault]
+    - aggregate:
+      - get: concourse-deploy-p-mysql
+      - get: omg-cli
+        params:
+          globs:
+          - omg-linux
+      - get: omg-product-bundle
+        trigger: true
+        params:
+          globs:
+          - p-mysql-plugin-linux
+        passed: [populate-or-rotate-vault]
     - task: get-product-version
       config:
         platform: linux
@@ -135,9 +136,9 @@ jobs:
             repository: virtmerlin/deploy-worker
         run:
           path: concourse-deploy-p-mysql/ci/tasks/get-version-from-plugin.sh
-          params:
-            PRODUCT_PLUGIN: {{product_plugin}}
-            OUTPUT_DIR: versions
+        params:
+          PRODUCT_PLUGIN: {{product_plugin}}
+          OUTPUT_DIR: versions
         inputs:
         - name: concourse-deploy-p-mysql
         - name: omg-cli
@@ -165,27 +166,28 @@ jobs:
         outputs:
 - name: deploy
   plan:
-    - get: concourse-deploy-p-mysql
-    - get: omg-cli
-      passed: [get-product-version]
-      params:
-        globs:
-        - omg-linux
-    - get: omg-product-bundle
-      passed: [get-product-version]
-      trigger: true
-      params:
-        globs:
-        - p-mysql-plugin-linux
-    - get: p-mysql
-      params:
-        globs:
-        - p-mysql-*
-    - get: stemcells
-      trigger: true
-      params:
-        globs:
-        - {{stemcell-cpi-glob}}
+    - aggregate:
+      - get: concourse-deploy-p-mysql
+      - get: omg-cli
+        passed: [get-product-version]
+        params:
+          globs:
+          - omg-linux
+      - get: omg-product-bundle
+        passed: [get-product-version]
+        trigger: true
+        params:
+          globs:
+          - p-mysql-plugin-linux
+      - get: p-mysql
+        params:
+          globs:
+          - p-mysql-*
+      - get: stemcells
+        trigger: true
+        params:
+          globs:
+          - {{stemcell-cpi-glob}}
     - task: generate-manifest
       config:
         platform: linux

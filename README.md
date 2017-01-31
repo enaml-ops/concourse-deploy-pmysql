@@ -42,9 +42,7 @@ Deploy Pivotal MySQL with [omg](https://github.com/enaml-ops) in a Concourse pip
 1. Load your deployment properties into `vault`.  `VAULT_HASH` you define here and `vault_hash_misc` in `pipeline-vars.yml` below must match.  You may consider using the `vault` hash here to hold common settings, referenced by multiple `omg`-based deployments.  In such a case, you might name the hash something like `secret/nonprod-common-props`.
 
     ```
-    export VAULT_ADDR=http://YOUR_VAULT_ADDR:8200
-    export VAULT_HASH=secret/mysql-nonprod-props
-    vault write $VAULT_HASH @deployment-props.json
+    ./setup-vault.sh
     ```
 
 1. Delete or move `deployment-props.json` to a secure location.
@@ -87,3 +85,9 @@ Deploy Pivotal MySQL with [omg](https://github.com/enaml-ops) in a Concourse pip
     fly -t TARGET trigger-job -j deploy-pmysql/get-product-version -w
     fly -t TARGET trigger-job -j deploy-pmysql/deploy -w
     ```
+
+### Warnings
+
+1. Do not name deployment with the same name with resources that you have, avoid following words: `p-mysql`, `concourse-deploy-p-mysql`, `omg-cli` and etc.
+1. Pay attantion to your `az` name.
+1. **Important** in your `pipeline-vars.yml` file you need to have following vallue seetted up: `vault_hash_ip: secret/pmysql-nonprod-props`.

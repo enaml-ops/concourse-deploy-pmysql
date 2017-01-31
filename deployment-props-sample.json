@@ -5,4 +5,16 @@
   "bosh-pass": "PASSWORD",
   "bosh-url": "https://10.0.0.10",
   "bosh-user": "admin",
+  "bosh-port": "25555",
+
+  "base-domain": "scdc1.itcna.vmware.com",  
+  "broker-ip": "x.x.x.x",
+  "disk-type": "medium",
+  "ip": "x.x.x.x,x.x.x.x,x.x.x.x",
+  "monitoring-ip": "x.x.x.x",
+  "network": "pcf-services",
+  "notification-recipient-email": "noreply@google.com",
+  "proxy-ip": "x.x.x.x",
+  "vm-type": "medium",
+  "az": "az1"
 }

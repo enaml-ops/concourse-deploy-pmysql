@@ -30,7 +30,7 @@ concourse-pass: PASSWORD
 deployment-name: staging
 p-mysql-version: 1.7.12
 omg-cli-version: v1.0.3
-omg-product-bundle-version: v1.0.7
+omg-product-bundle-version: v1.0.7-484e6c
 skip-haproxy: false
 slack-channel: '#ops'
 slack-username: ops-user

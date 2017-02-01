@@ -91,3 +91,4 @@ Deploy Pivotal MySQL with [omg](https://github.com/enaml-ops) in a Concourse pip
 1. Do not name deployment with the same name with resources that you have, avoid following words: `p-mysql`, `concourse-deploy-p-mysql`, `omg-cli` and etc.
 1. Pay attantion to your `az` name.
 1. **Important** in your `pipeline-vars.yml` file you need to have following vallue seetted up: `vault_hash_ip: secret/pmysql-nonprod-props`.
+1. you can deploy only one instance of DB using this pipeline

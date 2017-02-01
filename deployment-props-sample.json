@@ -10,7 +10,7 @@
   "base-domain": "scdc1.itcna.vmware.com",  
   "broker-ip": "x.x.x.x",
   "disk-type": "medium",
-  "ip": "x.x.x.x,x.x.x.x,x.x.x.x",
+  "ip": "x.x.x.x",
   "monitoring-ip": "x.x.x.x",
   "network": "pcf-services",
   "notification-recipient-email": "noreply@google.com",
